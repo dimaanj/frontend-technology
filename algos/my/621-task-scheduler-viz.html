@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>621. Task Scheduler — пошаговая визуализация heap и cooldown</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1b26; color: #c0caf5; padding: 1.5rem; margin: 0; }
+    h1 { font-size: 1.25rem; margin: 0 0 0.5rem; color: #7aa2f7; }
+    .meta { font-size: 0.9rem; opacity: 0.9; margin-bottom: 1rem; }
+    .controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .controls button {
+      padding: 0.5rem 1rem; cursor: pointer; background: #7aa2f7; color: #1a1b26; border: none; border-radius: 6px; font-weight: 600;
+    }
+    .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .controls span { color: #9ece6a; font-weight: 600; }
+    .step-panel {
+      background: #24283b; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .step-panel h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #bb9af7; }
+    .row { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .col { flex: 1; min-width: 200px; }
+    .heap-box, .cooldown-box {
+      background: #1a1b26; border-radius: 6px; padding: 0.75rem; border: 1px solid #3b4261;
+    }
+    .heap-box h4, .cooldown-box h4 { margin: 0 0 0.5rem; font-size: 0.8rem; color: #565f89; }
+    .heap-items, .cooldown-items { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip {
+      padding: 0.35rem 0.6rem; border-radius: 4px; font-weight: 700; font-size: 0.85rem;
+    }
+    .chip.letter-A { background: #f7768e; color: #1a1b26; }
+    .chip.letter-B { background: #9ece6a; color: #1a1b26; }
+    .chip.letter-C { background: #e0af68; color: #1a1b26; }
+    .chip.letter-D { background: #7dcfff; color: #1a1b26; }
+    .chip.letter-E { background: #bb9af7; color: #1a1b26; }
+    .chip.letter-F { background: #73daca; color: #1a1b26; }
+    .chip.letter-G { background: #ff9e64; color: #1a1b26; }
+    .chip.idle { background: #3b4261; color: #565f89; }
+    .chip.cooldown { border: 2px solid #e0af68; }
+    .action { margin-top: 0.75rem; padding: 0.5rem; background: #1a1b26; border-radius: 4px; color: #9ece6a; }
+    .timeline-wrap { margin-top: 0.75rem; }
+    .timeline-wrap h4 { margin: 0 0 0.35rem; font-size: 0.8rem; color: #565f89; }
+    .timeline-viz { display: flex; flex-wrap: wrap; gap: 2px; }
+    .timeline-viz .chip { min-width: 28px; text-align: center; }
+    .condition {
+      background: #24283b; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem;
+      border-left: 4px solid #7aa2f7; font-size: 0.9rem; line-height: 1.5;
+    }
+    .condition h2 { font-size: 0.95rem; margin: 0 0 0.5rem; color: #7aa2f7; }
+    .condition p { margin: 0.35rem 0; }
+    .condition .io { color: #9ece6a; }
+    .condition .hint { color: #565f89; font-size: 0.85rem; margin-top: 0.5rem; }
+    .condition code { background: #1a1b26; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.88em; }
+  </style>
+</head>
+<body>
+  <h1>621. Task Scheduler — пошаговая визуализация</h1>
+  <div class="condition">
+    <h2>Условие задачи</h2>
+    <p>Дан массив символов <code>tasks</code> — задачи процессора (каждая буква = отдельная задача). Одна задача выполняется за одну единицу времени. За такт процессор может выполнить одну задачу или простаивать (idle).</p>
+    <p>Дано целое <code>n ≥ 0</code> — период восстановления: между <strong>любыми двумя одинаковыми</strong> задачами должно пройти не менее <code>n</code> единиц времени.</p>
+    <p class="io"><strong>Вернуть</strong> наименьшее количество единиц времени для выполнения всех задач.</p>
+    <p class="hint">Пример: tasks = ["A","A","A","B","B","B"], n = 2 → ответ 8. Расписание: A → B → idle → A → B → idle → A → B.</p>
+  </div>
+  <p class="meta">На каждом шаге: состояние HEAP (доступные задачи), COOLDOWN (ожидают до readyTime), действие и timeline.</p>
+  <div class="controls">
+    <button id="btnPrev">← Пред</button>
+    <button id="btnNext">След →</button>
+    <span id="stepInfo">Шаг 1 из 1</span>
+  </div>
+  <div class="step-panel">
+    <h3 id="stepTitle">Шаг 1 (t = 0)</h3>
+    <div class="row">
+      <div class="col">
+        <div class="heap-box">
+          <h4>HEAP (max вверху)</h4>
+          <div class="heap-items" id="heapItems"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="cooldown-box">
+          <h4>COOLDOWN (очередь: letter:count @ readyTime)</h4>
+          <div class="cooldown-items" id="cooldownItems"></div>
+        </div>
+      </div>
+    </div>
+    <div class="action" id="actionText">—</div>
+    <div class="timeline-wrap">
+      <h4>Timeline</h4>
+      <div class="timeline-viz" id="timelineViz"></div>
+    </div>
+  </div>
+
+  <script>
+    class MaxHeap {
+      constructor() { this.heap = []; }
+      size() { return this.heap.length; }
+      add(item) { this.heap.push(item); this._siftUp(this.heap.length - 1); }
+      poll() {
+        if (!this.heap.length) return null;
+        if (this.heap.length === 1) return this.heap.pop();
+        const top = this.heap[0];
+        this.heap[0] = this.heap.pop();
+        this._siftDown(0);
+        return top;
+      }
+      _siftUp(i) {
+        while (i > 0) {
+          const p = (i - 1) >> 1;
+          if (this.heap[p].count >= this.heap[i].count) break;
+          [this.heap[p], this.heap[i]] = [this.heap[i], this.heap[p]];
+          i = p;
+        }
+      }
+      _siftDown(i) {
+        const n = this.heap.length;
+        while (true) {
+          let max = i, l = 2 * i + 1, r = l + 1;
+          if (l < n && this.heap[l].count > this.heap[max].count) max = l;
+          if (r < n && this.heap[r].count > this.heap[max].count) max = r;
+          if (max === i) break;
+          [this.heap[i], this.heap[max]] = [this.heap[max], this.heap[i]];
+          i = max;
+        }
+      }
+      snapshot() { return this.heap.map(x => ({ letter: x.letter, count: x.count })); }
+    }
+
+    function getScheduleSteps(tasks, n) {
+      const steps = [];
+      if (!tasks.length) {
+        steps.push({ time: 0, heap: [], cooldown: [], action: '—', timeline: [] });
+        return steps;
+      }
+      const freq = new Map();
+      tasks.forEach(t => freq.set(t, (freq.get(t) || 0) + 1));
+      const heap = new MaxHeap();
+      freq.forEach((count, letter) => heap.add({ letter, count }));
+      const cooldown = [];
+      let head = 0, time = 0;
+      const timeline = [];
+
+      const pushStep = (action) => {
+        steps.push({
+          time,
+          heap: heap.snapshot(),
+          cooldown: cooldown.slice(head).map(x => ({ letter: x.letter, count: x.count, readyTime: x.readyTime })),
+          action,
+          timeline: [...timeline],
+        });
+      };
+
+      while (heap.size() > 0 || head < cooldown.length) {
+        if (heap.size() === 0 && cooldown[head].readyTime > time) {
+          const jump = cooldown[head].readyTime - time;
+          pushStep(`idle × ${jump} (прыжок до t=${cooldown[head].readyTime})`);
+          for (let i = 0; i < jump; i++) timeline.push('idle');
+          time = cooldown[head].readyTime;
+        }
+        while (head < cooldown.length && cooldown[head].readyTime <= time) {
+          heap.add(cooldown[head]);
+          head++;
+          pushStep(`вернули в heap (readyTime ≤ ${time})`);
+        }
+        if (heap.size() > 0) {
+          const node = heap.poll();
+          timeline.push(node.letter);
+          node.count--;
+          if (node.count > 0) cooldown.push({ ...node, readyTime: time + n + 1 });
+          pushStep(`выполнили ${node.letter}`);
+        } else {
+          timeline.push('idle');
+          pushStep('idle');
+        }
+        time++;
+      }
+      pushStep('готово');
+      return steps;
+    }
+
+    const TASK_CLASS = { A: 'letter-A', B: 'letter-B', C: 'letter-C', D: 'letter-D', E: 'letter-E', F: 'letter-F', G: 'letter-G', idle: 'idle' };
+    let steps = [];
+    let stepIndex = 0;
+    const tasks = ['A', 'A', 'A', 'B', 'B', 'B'];
+    const n = 2;
+
+    function renderStep() {
+      const step = steps[stepIndex];
+      if (!step) return;
+      document.getElementById('stepTitle').textContent = `Шаг ${stepIndex + 1} (t = ${step.time})`;
+      document.getElementById('stepInfo').textContent = `Шаг ${stepIndex + 1} из ${steps.length}`;
+      document.getElementById('actionText').textContent = step.action;
+
+      const heapEl = document.getElementById('heapItems');
+      if (step.heap.length) {
+        heapEl.innerHTML = step.heap.map(x => `<span class="chip ${TASK_CLASS[x.letter] || 'idle'}">${x.letter}:${x.count}</span>`).join('');
+      } else {
+        heapEl.innerHTML = '<span style="color:#565f89">(пусто)</span>';
+      }
+
+      const cdEl = document.getElementById('cooldownItems');
+      if (step.cooldown.length) {
+        cdEl.innerHTML = step.cooldown.map(x => `<span class="chip cooldown ${TASK_CLASS[x.letter] || 'idle'}" title="готов с t=${x.readyTime}">${x.letter}:${x.count} @ t=${x.readyTime}</span>`).join('');
+      } else {
+        cdEl.innerHTML = '<span style="color:#565f89">(пусто)</span>';
+      }
+
+      const tlEl = document.getElementById('timelineViz');
+      tlEl.innerHTML = step.timeline.map((l, i) => `<span class="chip ${TASK_CLASS[l] || 'idle'}">${l}</span>`).join('');
+
+      document.getElementById('btnPrev').disabled = stepIndex === 0;
+      document.getElementById('btnNext').disabled = stepIndex === steps.length - 1;
+    }
+
+    steps = getScheduleSteps(tasks, n);
+    stepIndex = 0;
+    renderStep();
+
+    document.getElementById('btnPrev').onclick = () => { stepIndex = Math.max(0, stepIndex - 1); renderStep(); };
+    document.getElementById('btnNext').onclick = () => { stepIndex = Math.min(steps.length - 1, stepIndex + 1); renderStep(); };
+  </script>
+</body>
+</html>
