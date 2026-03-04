@@ -1,0 +1,58 @@
+.demo-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.demo-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 1rem;
+  background: #1a1a2e;
+  color: #eee;
+}
+
+.demo-sidebar-title {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+}
+
+.demo-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.demo-nav-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #ccc;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.demo-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.demo-nav-item--active {
+  background: rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
+}
+
+.demo-main {
+  flex: 1;
+  padding: 1.5rem;
+  overflow: auto;
+  background: #0f0f14;
+}
