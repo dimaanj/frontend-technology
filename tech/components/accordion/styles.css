@@ -32,7 +32,24 @@ h1 {
   color: #1e40af;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  white-space: nowrap;
+  clip-path: inset(100%);
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
 /* Accordion */
+
+.accordion-section {
+  margin: 0;
+}
 
 .accordion {
   border: 1px solid #e5e7eb;
@@ -46,6 +63,10 @@ h1 {
 
 .accordion-item:last-child {
   border-bottom: none;
+}
+
+.accordion-heading {
+  margin: 0;
 }
 
 .accordion-header {
@@ -67,6 +88,11 @@ h1 {
   background: #f9fafb;
 }
 
+.accordion-header:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: -3px;
+}
+
 /* Стрелка — поворот при открытии */
 .accordion-icon {
   font-size: 12px;
@@ -81,12 +107,14 @@ h1 {
 
 /* Контент — анимация высоты */
 .accordion-content {
-  overflow: hidden;
-  max-height: 0;
-  transition:
-    max-height 0.3s ease,
-    padding 0.3s ease;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
   background: #fff;
+}
+
+.accordion-content-inner {
+  overflow: hidden;
 }
 
 .accordion-content p {
@@ -97,7 +125,7 @@ h1 {
 }
 
 .accordion-item.open .accordion-content {
-  max-height: 300px;
+  grid-template-rows: 1fr;
 }
 
 /* Адаптив */

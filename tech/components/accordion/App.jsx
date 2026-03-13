@@ -19,7 +19,7 @@
  * - Адаптивный дизайн
  */
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import "./styles.css";
 
@@ -58,13 +58,48 @@ const accordionData = [
 
 export default function App() {
   const [openId, setOpenId] = useState(null);
+  const [announcement, setAnnouncement] = useState("Accordion is ready");
+  const buttonRefs = useRef([]);
+
+  const itemIds = useMemo(() => accordionData.map((item) => item.id), []);
 
   const toggleAccordion = (id) => {
     if (openId === id) {
       setOpenId(null);
+      setAnnouncement(
+        `${accordionData.find((item) => item.id === id)?.title ?? "Section"} collapsed`,
+      );
     } else {
       setOpenId(id);
+      setAnnouncement(
+        `${accordionData.find((item) => item.id === id)?.title ?? "Section"} expanded`,
+      );
     }
+  };
+
+  const onHeaderKeyDown = (event, index) => {
+    const maxIndex = accordionData.length - 1;
+    let nextIndex = index;
+
+    switch (event.key) {
+      case "ArrowDown":
+        nextIndex = index === maxIndex ? 0 : index + 1;
+        break;
+      case "ArrowUp":
+        nextIndex = index === 0 ? maxIndex : index - 1;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = maxIndex;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    buttonRefs.current[nextIndex]?.focus();
   };
 
   return (
@@ -75,28 +110,59 @@ export default function App() {
         <p>Click on any question to expand or collapse the answer</p>
       </div>
 
-      <div className="accordion">
-        {accordionData.map((item) => {
-          const accordionClasses = clsx("accordion-item", {
-            open: openId === item.id,
-          });
+      <section className="accordion-section" aria-labelledby="accordion-title">
+        <h2 id="accordion-title" className="visually-hidden">
+          Frequently asked questions
+        </h2>
+        <div className="accordion" role="presentation">
+          {accordionData.map((item, index) => {
+            const buttonId = `accordion-header-${item.id}`;
+            const panelId = `accordion-panel-${item.id}`;
+            const isOpen = openId === item.id;
+            const accordionClasses = clsx("accordion-item", {
+              open: isOpen,
+            });
 
-          return (
-            <div key={item.id} className={accordionClasses}>
-              <button
-                className="accordion-header"
-                onClick={() => toggleAccordion(item.id)}
-              >
-                <span>{item.title}</span>
-                <span className="accordion-icon">▼</span>
-              </button>
-              <div className="accordion-content">
-                <p>{item.content}</p>
+            return (
+              <div key={item.id} className={accordionClasses}>
+                <h3 className="accordion-heading">
+                  <button
+                    id={buttonId}
+                    ref={(element) => {
+                      buttonRefs.current[index] = element;
+                    }}
+                    type="button"
+                    className="accordion-header"
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => toggleAccordion(item.id)}
+                    onKeyDown={(event) => onHeaderKeyDown(event, index)}
+                  >
+                    <span>{item.title}</span>
+                    <span className="accordion-icon" aria-hidden="true">
+                      ▼
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  id={panelId}
+                  className="accordion-content"
+                  role="region"
+                  aria-labelledby={buttonId}
+                  aria-hidden={!isOpen}
+                >
+                  <div className="accordion-content-inner">
+                    <p>{item.content}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </section>
+      <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </p>
     </div>
   );
 }
