@@ -1,0 +1,13 @@
+---
+description: FSD and project conventions for AI RAG Editor
+globs: "pet-rag-editor/**"
+alwaysApply: false
+---
+
+# Pet RAG Editor Conventions
+
+- FSD: shared ← entities ← features ← widgets ← pages ← app
+- Import only from lower layers
+- Export via index.ts only
+- Normalized state: byId + allIds
+- data-testid for E2E selectors

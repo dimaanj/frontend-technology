@@ -1,0 +1,12 @@
+---
+description: Testing conventions for AI RAG Editor
+globs: "**/*.test.{ts,tsx}"
+alwaysApply: false
+---
+
+# Testing
+
+- Vitest for unit/component tests
+- Mock WebSocket/SSE for real-time
+- Use data-testid for stable selectors
+- cursor-ide-browser for E2E when available

@@ -2,10 +2,12 @@ import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
 import AccordionApp from './accordion/App.jsx';
 import AccordionGridApp from './accordion-grid/App.jsx';
+import ReflowDemosApp from './reflow-demos/App.jsx';
 
 const components = {
   accordion: AccordionApp,
   'accordion-grid': AccordionGridApp,
+  'reflow-demos': ReflowDemosApp,
 };
 
 const componentList = Object.keys(components);
