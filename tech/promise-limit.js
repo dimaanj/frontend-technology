@@ -5,7 +5,33 @@
 // - если задача падает, ошибка должна оказаться в соответствующей позиции результата,
 //   при этом остальные задачи продолжают выполняться
 
-async function promiseLimit(tasks, limit) {
+async function promiseLimit4(tasks, limit) {
+  const result = [];
+  const workers = [];
+
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i]()
+      .then((data) => {
+        result.push(data);
+        workers.filter((cur) => cur !== task);
+      })
+      .catch((error) => {
+        result.push(error);
+        workers.filter((cur) => cur !== task);
+      });
+
+    workers.push(task);
+
+    if (workers.length === limit) {
+      await Promise.race(workers);
+    }
+  }
+
+  await Promise.all(workers);
+  return result;
+}
+
+async function promiseLimit2(tasks, limit) {
   const results = [];
   const executing = [];
   for (let i = 0; i < tasks.length; i++) {
@@ -18,7 +44,6 @@ async function promiseLimit(tasks, limit) {
       .catch((error) => {
         results[i] = { error };
         executing.splice(executing.indexOf(task), 1);
-        throw error;
       });
 
     executing.push(task);
@@ -29,6 +54,37 @@ async function promiseLimit(tasks, limit) {
   }
   await Promise.all(executing);
   return results;
+}
+
+async function promiseLimit(tasks, limit) {
+  const result = [];
+  const runners = [];
+  let index = 0;
+
+  function getRunnable(task) {
+    index++;
+    return task()
+      .then((data) => {
+        result.push(data);
+        
+      })
+      .catch((error) => {
+        result.push(error);
+      })
+      .then(() => {
+        if(index <= tasks.length) {
+          const runnable = getRunnable(tasks[index]);
+          runnable();
+        }
+      });
+  }
+
+  for(let i = 0; i < Math.min(limit, tasks.length); i++) {
+    runners.push(getRunnable(tasks[index]))
+  }
+
+  await Promise.all(runners);
+  return result;
 }
 
 /**
